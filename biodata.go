@@ -74,21 +74,40 @@ var keys = keyMap{
 	),
 }
 
-// General stuff for styling the view
+// styles
 var (
-	keywordStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
-	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	mainStyle    = lipgloss.NewStyle().MarginLeft(2)
+	mainStyle = lipgloss.NewStyle().MarginLeft(2)
+	cardStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder()).
+			Background(lipgloss.Color(""))
+	selectedCardStyle = cardStyle.Background(lipgloss.Color("211"))
 )
 
 type page struct {
-	// UpdatePage func(msg tea.Msg, m model) (tea.Model, tea.Cmd)
-	// Page       func(m model) string
-	Options []string
+	UpdatePage func(tea.KeyMsg, model) (tea.Model, tea.Cmd)
+	Page       func(model) string
+	Options    map[int]int
+	Labels     []string
+}
+
+func newChoicePage(choices []string, dests []int) page {
+	options := make(map[int]int)
+
+	for i, dest := range dests {
+		options[i] = dest
+	}
+
+	return page{
+		UpdatePage: updateChoices,
+		Page:       choicesView,
+		Options:    options,
+		Labels:     choices,
+	}
 }
 
 type model struct {
 	Pages    []page
+	Page     int
 	Choice   int
 	Chosen   bool
 	Quitting bool
@@ -99,8 +118,12 @@ type model struct {
 func newModel() model {
 	return model{
 		Pages: []page{
-			{Options: []string{"DNA / RNA", "Protein", "Literature", "Proteins"}},
+			newChoicePage([]string{"DNA / RNA", "Protein", "Literature"}, []int{1, 2, 3}),
+			newChoicePage([]string{"Sequence", "Annotation", "Genome"}, []int{4, 5, 6}),
+			newChoicePage([]string{"Sequence", "Annotation", "Homology"}, []int{7, 8, 9}),
+			newChoicePage([]string{"Keyword", "Author"}, []int{10, 11}),
 		},
+		Page:     0,
 		Choice:   0,
 		Chosen:   false,
 		Quitting: false,
@@ -123,11 +146,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		// update the choice screen
-		if !m.Chosen {
-			return updateChoices(msg, m)
-		}
-		// update the page
-		// return m.Pages[m.Choice].UpdatePage(msg, m)
+		return m.Pages[m.Page].UpdatePage(msg, m)
 
 	case tea.WindowSizeMsg:
 		m.help.Width = msg.Width
@@ -140,11 +159,7 @@ func (m model) View() string {
 	if m.Quitting {
 		return "\n  See you later!\n\n"
 	}
-	if !m.Chosen {
-		s = choicesView(m)
-	} else {
-		// s = m.Pages[m.Choice].Page(m)
-	}
+	s = m.Pages[m.Page].Page(m)
 	return mainStyle.Render("\n" + s + "\n\n")
 }
 
@@ -160,8 +175,8 @@ func updateChoices(msg tea.KeyMsg, m model) (tea.Model, tea.Cmd) {
 		}
 	case key.Matches(msg, m.keys.Down):
 		m.Choice++
-		if m.Choice > len(m.Pages)-1 {
-			m.Choice = len(m.Pages) - 1
+		if m.Choice > len(m.Pages[m.Page].Labels)-1 {
+			m.Choice = len(m.Pages[m.Page].Labels) - 1
 		}
 
 	case key.Matches(msg, m.keys.Left):
@@ -170,6 +185,7 @@ func updateChoices(msg tea.KeyMsg, m model) (tea.Model, tea.Cmd) {
 		// TODO
 	case key.Matches(msg, m.keys.Enter):
 		m.Chosen = true
+		m.Page = m.Pages[m.Page].Options[m.Choice]
 	case key.Matches(msg, m.keys.Help):
 		m.help.ShowAll = !m.help.ShowAll
 	}
@@ -180,7 +196,7 @@ func updateChoices(msg tea.KeyMsg, m model) (tea.Model, tea.Cmd) {
 
 // select between various choices
 func choicesView(m model) string {
-	choices := m.Pages[m.Choice].Options
+	choices := m.Pages[m.Page].Labels
 
 	tpl := "What biological data are you interested in?\n\n"
 	tpl += "%s\n\n"
@@ -191,8 +207,16 @@ func choicesView(m model) string {
 	tpl += m.help.View(m.keys)
 
 	choiceText := ""
+	var style lipgloss.Style
+	idx := 0
 	for _, choice := range choices {
-		choiceText += choice + "\n"
+		if idx == m.Choice {
+			style = selectedCardStyle
+		} else {
+			style = cardStyle
+		}
+		choiceText += style.Render(choice) + "\n"
+		idx++
 	}
 
 	return fmt.Sprintf(tpl, choiceText)
