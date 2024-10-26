@@ -1,1 +1,10 @@
 .ssh/
+
+# preferences
+.vscode/
+
+# debug
+debug.log
+
+# metadata info
+INFO.md
