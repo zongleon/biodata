@@ -8,3 +8,6 @@ debug.log
 
 # metadata info
 INFO.md
+
+# builds
+bin/
