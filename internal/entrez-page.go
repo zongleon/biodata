@@ -13,16 +13,18 @@ import (
 )
 
 type entrezPage struct {
-	Title    string
-	Input    textinput.Model
-	Response []GBSeq
-	Results  list.Model
-	Spinner  spinner.Model
-	Loading  bool
-	Received bool
+	Title       string
+	Description string
+	Filter      string
+	Input       textinput.Model
+	Response    []GBSeq
+	Results     list.Model
+	Spinner     spinner.Model
+	Loading     bool
+	Received    bool
 }
 
-func NewEntrezPage(title string) *entrezPage {
+func NewEntrezPage(title, filter, desc string) *entrezPage {
 	ti := textinput.New()
 	ti.Placeholder = "Text query"
 	ti.Focus()
@@ -34,11 +36,13 @@ func NewEntrezPage(title string) *entrezPage {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
 	return &entrezPage{
-		Title:    title,
-		Input:    ti,
-		Spinner:  s,
-		Loading:  false,
-		Received: false,
+		Title:       title,
+		Description: desc,
+		Filter:      filter,
+		Input:       ti,
+		Spinner:     s,
+		Loading:     false,
+		Received:    false,
 	}
 }
 
@@ -81,10 +85,10 @@ type errMsg struct {
 	err error
 }
 
-func fetch(query string) func() tea.Msg {
+func fetch(filter, query string) func() tea.Msg {
 	return func() tea.Msg {
 		// hit the query endpoint
-		ids, q, err := SearchDBForQuery("nuccore", query)
+		ids, q, err := SearchDBForQuery("nuccore", filter, query)
 		if err != nil {
 			return errMsg{err: err}
 		}
@@ -116,13 +120,20 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 				page.Loading = true
 				return m, tea.Batch(
 					page.Spinner.Tick,
-					fetch(page.Input.Value()),
+					fetch(page.Filter, page.Input.Value()),
 				)
 			}
+		case key.Matches(msg, m.Keys.Back):
+			if page.Input.Value() == "" && !page.Received {
+				m.UpdateBack(msg)
+			}
+			if page.Received {
+				page.Received = false
+				page.Loading = false
+				page.Input.Reset()
+			}
 		}
-		if page.Input.Value() == "" {
-			m.UpdateBack(msg)
-		}
+
 	case entrezMsg:
 		page.Loading = false
 		page.Response = msg.result
@@ -144,7 +155,7 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 
 	case listSelectMsg:
 		m.ShowHelp = false
-		m.PreviousPages = append(m.PreviousPages, m.Page)
+		m.UpdateHistory(m.Page, page.Title)
 		m.Page = pageStart + msg.Index
 
 	case tea.WindowSizeMsg:
@@ -190,7 +201,7 @@ func UpdateDelegate(msg tea.Msg, m *list.Model) tea.Cmd {
 }
 
 func (page *entrezPage) Page(m Model) string {
-	p := page.Title
+	p := page.Description + "\n"
 	p += "\n\n"
 
 	if page.Received {
@@ -203,4 +214,8 @@ func (page *entrezPage) Page(m Model) string {
 
 	p += "\n\n"
 	return p
+}
+
+func (page *entrezPage) GetTitle() string {
+	return page.Title
 }

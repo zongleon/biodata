@@ -22,21 +22,21 @@ type ESearchResult struct {
 	} `xml:"IdList"`
 }
 
-func SearchDBForQuery(database, query string) ([]string, string, error) {
-	res, err := ESearch(database, query)
+func SearchDBForQuery(database, filter, query string) ([]string, string, error) {
+	res, err := ESearch(database, filter, query)
 	if err != nil {
 		return nil, "", err
 	}
 	return res.IdList.Ids, res.Query, err
 }
 
-func ESearch(database, query string) (*ESearchResult, error) {
+func ESearch(database, filter, query string) (*ESearchResult, error) {
 	baseURL := "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 
 	// Build query URL with parameters
 	params := url.Values{}
 	params.Add("db", database)
-	params.Add("term", query)
+	params.Add("term", filter+"[filter] "+query)
 	params.Add("retmode", "xml")
 	params.Add("sort", "relevance")
 
@@ -100,6 +100,9 @@ func EFetch(database string, ids []string) ([]GBSeq, error) {
 	url := fmt.Sprintf("%s?db=%s&id=%s&retmode=xml&rettype=gb&seq_start=1&seq_stop=1",
 		baseURL, database, strings.Join(ids, ","))
 
+	// url := fmt.Sprintf("%s?db=%s&id=%s&retmode=xml&rettype=gp",
+	// 	baseURL, database, strings.Join(ids, ","))
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -129,7 +132,7 @@ func (seq GBSeq) PrettyPrint() string {
 	sb.WriteString("\n=== SEQUENCE RECORD ===\n")
 	sb.WriteString(fmt.Sprintf(padding+" %s\n", "Locus:", seq.Locus))
 	sb.WriteString(fmt.Sprintf(padding+" %s\n", "Accession:", seq.PrimaryAccession))
-	sb.WriteString(fmt.Sprintf(padding+" %d bp\n", "Length:", seq.Length))
+	// sb.WriteString(fmt.Sprintf(padding+" %d bp\n", "Length:", seq.Length))
 
 	// Sequence characteristics
 	sb.WriteString("\n--- SEQUENCE CHARACTERISTICS ---\n")
@@ -148,9 +151,9 @@ func (seq GBSeq) PrettyPrint() string {
 	sb.WriteString("\n--- DESCRIPTION ---\n")
 	sb.WriteString(fmt.Sprintf(padding+" %s\n", "Definition:", seq.Definition))
 	sb.WriteString(fmt.Sprintf(padding+" %s\n", "Organism:", seq.Organism))
-	if seq.Taxonomy != "" {
-		sb.WriteString(fmt.Sprintf(padding+" %s\n", "Taxonomy:", seq.Taxonomy))
-	}
+	// if seq.Taxonomy != "" {
+	// 	sb.WriteString(fmt.Sprintf(padding+" %s\n", "Taxonomy:", seq.Taxonomy))
+	// }
 
 	// Keywords
 	if len(seq.Keywords) > 0 {

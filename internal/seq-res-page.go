@@ -74,3 +74,7 @@ func (page *seqResPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 func (page *seqResPage) Page(m Model) string {
 	return fmt.Sprintf("%s\n%s\n%s", headerView(page.Title, page.Width), page.Viewport.View(), footerView(page.Width))
 }
+
+func (page *seqResPage) GetTitle() string {
+	return page.Title
+}

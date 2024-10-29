@@ -11,17 +11,20 @@ import (
 
 // styles
 var (
-	mainStyle = lipgloss.NewStyle().MarginLeft(2)
+	headerStyle = lipgloss.NewStyle().Margin(1).Background(lipgloss.Color("8"))
+	mainStyle   = lipgloss.NewStyle().MarginLeft(2)
 )
 
 type Page interface {
 	UpdatePage(tea.Msg, Model) (tea.Model, tea.Cmd)
 	Page(Model) string
+	GetTitle() string
 }
 
 type Model struct {
 	Pages         map[int]Page
 	PreviousPages []int
+	PreviousNames []string
 	Page          int
 	Quitting      bool
 	Keys          keyMap
@@ -92,8 +95,8 @@ var Keys = keyMap{
 		key.WithHelp("?", "toggle help"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "esc", "ctrl+c"),
-		key.WithHelp("q", "quit"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc/ctrl-c", "quit"),
 	),
 }
 
@@ -111,11 +114,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Width = msg.Width
 
 	case tea.KeyMsg:
-		// always quit no matter what screen
+		// quit (mostly)
 		if key.Matches(msg, m.Keys.Quit) {
 			m.Quitting = true
 			return m, tea.Quit
 		}
+
 		// always show the extended help no matter what screen
 		if key.Matches(msg, m.Keys.Help) {
 			m.Help.ShowAll = !m.Help.ShowAll
@@ -127,11 +131,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	var s string
 	if m.Quitting {
 		return "\n  See you later!\n\n"
 	}
-	s = m.Pages[m.Page].Page(m)
+	s := headerStyle.Render(strings.Join(append(m.PreviousNames, m.Pages[m.Page].GetTitle()), " > ")) + "\n"
+
+	s += m.Pages[m.Page].Page(m)
 
 	// display help at the bottom-ish
 	helpView := m.Help.View(m.Keys)
@@ -140,15 +145,24 @@ func (m Model) View() string {
 	helpView = strings.Repeat("\n", height) + helpView
 
 	if m.ShowHelp {
-		return mainStyle.Render("\n" + s + helpView)
+		return mainStyle.Render(s + helpView)
 	}
-	return mainStyle.Render("\n" + s)
+	return mainStyle.Render(s)
 }
 
 func (m *Model) UpdateBack(msg tea.KeyMsg) {
 	// helper function, allows going back
 	if key.Matches(msg, m.Keys.Back) {
+		if len(m.PreviousPages) == 0 {
+			return
+		}
 		m.Page = m.PreviousPages[len(m.PreviousPages)-1]
 		m.PreviousPages = m.PreviousPages[:len(m.PreviousPages)-1]
+		m.PreviousNames = m.PreviousNames[:len(m.PreviousNames)-1]
 	}
+}
+
+func (m *Model) UpdateHistory(page int, title string) {
+	m.PreviousPages = append(m.PreviousPages, page)
+	m.PreviousNames = append(m.PreviousNames, title)
 }

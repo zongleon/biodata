@@ -15,29 +15,31 @@ var (
 	selectedCardStyle = cardStyle.BorderBackground(lipgloss.Color("211"))
 )
 
-type ChoicePage struct {
-	Title   string
-	Options []int
-	Labels  []string
-	Choice  int
-	Chosen  bool
+type choicePage struct {
+	Title       string
+	Description string
+	Options     []int
+	Labels      []string
+	Choice      int
+	Chosen      bool
 }
 
-func NewChoicePage(title string, choices []string, dests []int) *ChoicePage {
+func NewChoicePage(title string, desc string, choices []string, dests []int) *choicePage {
 	options := make([]int, len(dests))
 	copy(options, dests)
 
-	return &ChoicePage{
-		Title:   title,
-		Options: options,
-		Labels:  choices,
-		Choice:  0,
-		Chosen:  false,
+	return &choicePage{
+		Title:       title,
+		Description: desc,
+		Options:     options,
+		Labels:      choices,
+		Choice:      0,
+		Chosen:      false,
 	}
 }
 
 // Choice page (menu)
-func (page *ChoicePage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+func (page *choicePage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -57,7 +59,7 @@ func (page *ChoicePage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			// TODO
 		case key.Matches(msg, m.Keys.Enter):
 			page.Chosen = true
-			m.PreviousPages = append(m.PreviousPages, m.Page)
+			m.UpdateHistory(m.Page, page.Title)
 			m.Page = page.Options[page.Choice]
 		}
 		// allow going back
@@ -66,10 +68,10 @@ func (page *ChoicePage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (page *ChoicePage) Page(m Model) string {
+func (page *choicePage) Page(m Model) string {
 	choices := page.Labels
 
-	tpl := page.Title + "\n\n"
+	tpl := page.Description + "\n"
 	tpl += "%s\n\n"
 
 	choiceText := ""
@@ -86,4 +88,8 @@ func (page *ChoicePage) Page(m Model) string {
 	}
 
 	return fmt.Sprintf(tpl, choiceText)
+}
+
+func (page *choicePage) GetTitle() string {
+	return page.Title
 }
