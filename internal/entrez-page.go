@@ -120,13 +120,16 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 				)
 			}
 		}
+		if page.Input.Value() == "" {
+			m.UpdateBack(msg)
+		}
 	case entrezMsg:
 		page.Loading = false
 		page.Response = msg.result
 
 		// generate pages for all responses
 		for idx, res := range page.Response {
-			m.Pages[pageStart+idx] = newSeqResPage(res)
+			m.Pages[pageStart+idx] = NewSeqResPage(res, res.PrimaryAccession, m.Width-20, m.Height-8)
 		}
 
 		// customize delegate
@@ -140,6 +143,8 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		log.Fatalf("error searching or fetching in Entrez")
 
 	case listSelectMsg:
+		m.ShowHelp = false
+		m.PreviousPages = append(m.PreviousPages, m.Page)
 		m.Page = pageStart + msg.Index
 
 	case tea.WindowSizeMsg:

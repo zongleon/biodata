@@ -60,6 +60,8 @@ func (page *ChoicePage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			m.PreviousPages = append(m.PreviousPages, m.Page)
 			m.Page = page.Options[page.Choice]
 		}
+		// allow going back
+		m.UpdateBack(msg)
 	}
 	return m, nil
 }

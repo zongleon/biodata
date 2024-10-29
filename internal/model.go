@@ -48,15 +48,17 @@ type keyMap struct {
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Back, k.Enter, k.Help, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
 // key.Map interface.
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right}, // first column
-		{k.Help, k.Quit},                // second column
+		{k.Up, k.Down}, // these are columns
+		{k.Left, k.Right},
+		{k.Back, k.Enter},
+		{k.Help, k.Quit},
 	}
 }
 
@@ -119,8 +121,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Help.ShowAll = !m.Help.ShowAll
 		}
 
-		// update the page
 	}
+	// update the page
 	return m.Pages[m.Page].UpdatePage(msg, m)
 }
 
@@ -141,4 +143,12 @@ func (m Model) View() string {
 		return mainStyle.Render("\n" + s + helpView)
 	}
 	return mainStyle.Render("\n" + s)
+}
+
+func (m *Model) UpdateBack(msg tea.KeyMsg) {
+	// helper function, allows going back
+	if key.Matches(msg, m.Keys.Back) {
+		m.Page = m.PreviousPages[len(m.PreviousPages)-1]
+		m.PreviousPages = m.PreviousPages[:len(m.PreviousPages)-1]
+	}
 }
