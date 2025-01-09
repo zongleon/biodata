@@ -2,8 +2,11 @@ package internal
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,10 +30,11 @@ type seqResPage struct {
 	Data     GBSeq
 	Viewport viewport.Model
 	Title    string
+	Id       string
 	Width    int
 }
 
-func NewSeqResPage(data GBSeq, title string, width, height int) *seqResPage {
+func NewSeqResPage(data GBSeq, id string, title string, width, height int) *seqResPage {
 	headerHeight := lipgloss.Height(headerView(title, width))
 	footerHeight := lipgloss.Height(footerView(width))
 	verticalMarginHeight := headerHeight + footerHeight
@@ -42,6 +46,7 @@ func NewSeqResPage(data GBSeq, title string, width, height int) *seqResPage {
 		Data:     data,
 		Viewport: v,
 		Title:    title,
+		Id:       title,
 		Width:    width,
 	}
 }
@@ -57,11 +62,35 @@ func footerView(width int) string {
 	return line
 }
 
+func fetchSeq(id string) func() tea.Msg {
+	return func() tea.Msg {
+		// fetch single result
+		res, err := EFetch("nuccore", []string{id}, true)
+		if err != nil {
+			return errMsg{err: err}
+		}
+		err = os.WriteFile("./sequence.txt", []byte(res[0].Sequence), 0644)
+		if err != nil {
+			return errMsg{err: err}
+		}
+		return entrezMsg{
+			result: res,
+		}
+	}
+}
+
 // UpdatePage implements page.
 func (page *seqResPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if key.Matches(msg, m.Keys.Dl) {
+			return m, fetchSeq(page.Id)
+		}
 		m.UpdateBack(msg)
+	case entrezMsg:
+		// show a dialog or message that the result was downloaded
+	case errMsg:
+		log.Fatalf("error fetching result sequence: %s", msg.err)
 	}
 
 	var cmd tea.Cmd

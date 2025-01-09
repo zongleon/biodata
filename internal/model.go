@@ -42,6 +42,7 @@ type keyMap struct {
 	Down  key.Binding
 	Left  key.Binding
 	Right key.Binding
+	Dl    key.Binding
 	Back  key.Binding
 	Enter key.Binding
 	Help  key.Binding
@@ -81,6 +82,10 @@ var Keys = keyMap{
 	Right: key.NewBinding(
 		key.WithKeys("right", "l"),
 		key.WithHelp("→/l", "move right"),
+	),
+	Dl: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "download current sequence"),
 	),
 	Back: key.NewBinding(
 		key.WithKeys("backspace"),

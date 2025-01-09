@@ -84,6 +84,7 @@ type GBSeq struct {
 	Taxonomy         string   `xml:"GBSeq_taxonomy"`
 	References       []GBRef  `xml:"GBSeq_references>GBReference"`
 	Keywords         []string `xml:"GBSeq_keywords>GBKeyword"`
+	Sequence         string   `xml:"GBSeq_sequence"`
 }
 
 type GBRef struct {
@@ -94,10 +95,17 @@ type GBRef struct {
 	RefNumber int      `xml:"GBReference_reference"`
 }
 
-func EFetch(database string, ids []string) ([]GBSeq, error) {
-	baseURL := "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+func EFetch(database string, ids []string, wholeSeq bool) ([]GBSeq, error) {
+	var baseURL, params string
+	baseURL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
-	url := fmt.Sprintf("%s?db=%s&id=%s&retmode=xml&rettype=gb&seq_start=1&seq_stop=1",
+	if wholeSeq {
+		params = "%s?db=%s&id=%s&retmode=xml&rettype=gb"
+	} else {
+		params = "%s?db=%s&id=%s&retmode=xml&rettype=gb&seq_start=1&seq_stop=1"
+	}
+
+	url := fmt.Sprintf(params,
 		baseURL, database, strings.Join(ids, ","))
 
 	// url := fmt.Sprintf("%s?db=%s&id=%s&retmode=xml&rettype=gp",

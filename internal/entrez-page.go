@@ -77,6 +77,7 @@ func (i ListItem) FilterValue() string { return i.title }
 
 type entrezMsg struct {
 	result []GBSeq
+	ids    []string
 	items  []list.Item
 	query  string
 }
@@ -92,12 +93,13 @@ func fetch(filter, query string) func() tea.Msg {
 		if err != nil {
 			return errMsg{err: err}
 		}
-		res, err := EFetch("nuccore", ids)
+		res, err := EFetch("nuccore", ids, false)
 		if err != nil {
 			return errMsg{err: err}
 		}
 		return entrezMsg{
 			result: res,
+			ids:    ids,
 			items:  SeqsToItems(ids, res),
 			query:  q,
 		}
@@ -140,7 +142,7 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 
 		// generate pages for all responses
 		for idx, res := range page.Response {
-			m.Pages[pageStart+idx] = NewSeqResPage(res, res.PrimaryAccession, m.Width-20, m.Height-8)
+			m.Pages[pageStart+idx] = NewSeqResPage(res, msg.ids[idx], res.PrimaryAccession, m.Width-20, m.Height-8)
 		}
 
 		// customize delegate
@@ -151,7 +153,7 @@ func (page *entrezPage) UpdatePage(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		m.ShowHelp = false
 		page.Received = true
 	case errMsg:
-		log.Fatalf("error searching or fetching in Entrez")
+		log.Fatalf("error searching or fetching in Entrez: %s", msg.err)
 
 	case listSelectMsg:
 		m.ShowHelp = false
